@@ -26,7 +26,9 @@ I'm scaling by deploying tools for our own system, and as part of research I ope
 
 ---
 
-**Contact:** Shiv.tcdfinance@gmail.com — engineers and quants only.
+**Contact:** https://www.linkedin.com/in/theshivrao/ — product designers, engineers and quants only.
+Hearty Welcome for all businesses who wish to reduce their costing and create a higher leverage factor so you beat your industry.
+Looking to grow, looking to build!
 
 ---
 
