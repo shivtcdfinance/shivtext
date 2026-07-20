@@ -1,5 +1,7 @@
 Metadata-Version: 2.4
 Name: shivtext
-Version: 0.7.1
+Version: 0.7.4
 Summary: Token-optimized dictionary for φ-lang v4-five. Dictionary + Encyclopaedia + Reference.
+Project-URL: Homepage, https://github.com/shivtcdfinance/shivtext
+Project-URL: Repository, https://github.com/shivtcdfinance/shivtext
 Requires-Python: >=3.10

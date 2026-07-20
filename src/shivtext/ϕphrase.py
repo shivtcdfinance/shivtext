@@ -138,11 +138,18 @@ def _next_code(idx):
     return None
 
 def _is_code(token):
-    """Token is a φ code if it's 2 chars in C62. Check code table directly at decode."""
-    return len(token) == 2 and token[0] in C62 and token[1] in C62
+    """Token is a φ code — 2 chars (in C62) or 3 digits (overflow)."""
+    return (len(token) == 2 and token[0] in C62 and token[1] in C62) or \
+           (len(token) == 3 and token.isdigit())
 
 
-def new(load_cache=False):
+def new(load_cache=False, fallback_paths=None):
+    """Create a new φphrase session.
+    
+    Args:
+        fallback_paths: Optional list of .dict file paths for extension phrases.
+        Format: code=phrase text per line. Extension codes never overwrite primary.
+    """
     _ensure_phrases()
     s = {
         'phrases': dict(PHRASES),
@@ -153,6 +160,31 @@ def new(load_cache=False):
         'rev_comp': {},
         'threshold': 3,
     }
+    
+    # Load fallback dictionaries (auto-assign codes, 3-char for overflow)
+    if fallback_paths:
+        overflow_idx = 0
+        for fp in fallback_paths:
+            if not os.path.exists(fp):
+                continue
+            with open(fp) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    phrase = line.split('=', 1)[0] if '=' in line else line
+                    phrase = phrase.strip()
+                    if phrase and phrase not in s['phrases']:
+                        # Try 2-char first, fall back to 3-char overflow
+                        code = _next_code(len(s['code_to_phrase']))
+                        if not code:
+                            # 3-char overflow: 000, 001, 002...
+                            code = f"{overflow_idx:03d}"
+                            overflow_idx += 1
+                        if code:
+                            s['code_to_phrase'][code] = phrase
+                            s['phrases'][phrase] = code
+    
     return Session(s)
 
 

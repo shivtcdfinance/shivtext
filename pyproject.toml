@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shivtext"
-version = "0.7.1"
+version = "0.7.4"
 description = "Token-optimized dictionary for φ-lang v4-five. Dictionary + Encyclopaedia + Reference."
 requires-python = ">=3.10"
 
@@ -16,3 +16,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 shivtext = ["dict/*.txt", "dict/*.json", "encyclopaedia/*.json", "reference/*.json"]
+
+[project.urls]
+Homepage = "https://github.com/shivtcdfinance/shivtext"
+Repository = "https://github.com/shivtcdfinance/shivtext"
