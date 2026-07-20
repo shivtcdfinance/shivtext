@@ -244,7 +244,7 @@ class Session:
                 for phrase in sorted_phrases:
                     p_tokens = phrase.split()
                     if tokens[i:i+len(p_tokens)] == p_tokens and i + len(p_tokens) <= len(tokens):
-                        result.append(s['phrases'][phrase])
+                        result.append('^' + s['phrases'][phrase])
                         i += len(p_tokens)
                         break
                 else:
@@ -262,7 +262,7 @@ class Session:
         return encoded
 
     def decode(self, text):
-        """Decode: expand phrase codes, pass through English words."""
+        """Decode: expand ^prefixed phrase codes, pass through English words."""
         if not text:
             return ''
         s = self._s
@@ -273,25 +273,25 @@ class Session:
         while i < len(tokens):
             tok = tokens[i]
 
-            # Check for composition expansion
-            if tok in s['rev_comp']:
-                parts = []
-                for ct in s['rev_comp'][tok]:
-                    if ct in s['code_to_phrase']:
-                        parts.append(s['code_to_phrase'][ct])
-                    elif ct in s['rev_comp']:
-                        parts.append(ct)  # nested, simplified
-                    else:
-                        parts.append(ct)
-                out.append(' '.join(parts))
-                i += 1
-                continue
-
-            # Check for phrase expansion
-            if tok in s['code_to_phrase']:
-                out.append(s['code_to_phrase'][tok])
+            # Only process if it's a ^prefixed code
+            if tok.startswith('^'):
+                code = tok[1:]  # strip ^
+                # Check composition
+                if code in s['rev_comp']:
+                    parts = []
+                    for ct in s['rev_comp'][code]:
+                        if ct in s['code_to_phrase']:
+                            parts.append(s['code_to_phrase'][ct])
+                        else:
+                            parts.append(ct)
+                    out.append(' '.join(parts))
+                # Check phrase
+                elif code in s['code_to_phrase']:
+                    out.append(s['code_to_phrase'][code])
+                else:
+                    out.append(tok)  # unknown code, pass through
             else:
-                out.append(tok)
+                out.append(tok)  # English word, pass through
             i += 1
 
         return ' '.join(out)
@@ -316,7 +316,7 @@ class Session:
     def _learn_compositions(self, tokens):
         """Learn repeated code sequences → promote to single code."""
         s = self._s
-        code_tokens = [t for t in tokens if t in s['code_to_phrase']]
+        code_tokens = [t[1:] for t in tokens if t.startswith('^') and t[1:] in s['code_to_phrase']]
         for i in range(len(code_tokens) - 1):
             pair = f"{code_tokens[i]} {code_tokens[i+1]}"
             s['compositions'][pair] = s['compositions'].get(pair, 0) + 1
