@@ -28,6 +28,10 @@ def _init_code_tables():
         _ENGLISH_WORDS = set(shivtext.load_dict())
     except ImportError:
         _ENGLISH_WORDS = set()
+    # Add common 2-char English words not in frequency dict
+    _ENGLISH_WORDS.update(["yo","ok","ha","ah","oh","er","um","eh","mm","sh","hm",
+                            "ow","aw","ew","ay","ya","ye","na","da","ta","ma","pa",
+                            "fa","lo","ho","ey","oy"])
     for c in _ALL_2CHAR:
         nt = len(_ENC.encode(c))
         if nt == 1:

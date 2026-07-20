@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shivtext"
-version = "0.4.0"
+version = "0.5.0"
 description = "Token-optimized dictionary for φ-lang v4-five. Dictionary + Encyclopaedia + Reference."
 requires-python = ">=3.10"
 
