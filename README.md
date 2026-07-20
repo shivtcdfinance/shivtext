@@ -142,9 +142,22 @@ Dictionary-based disambiguation: if a 2-char token isn't in the English dictiona
 
 I'm scaling by deploying tools for our own system, and as part of research I open-source deprecated tools that perform at 70% efficiency. For example, φ-lang v2 — an in-house compression engine — compressed a 101KB skill file to 252 bytes.
 
+## Contact
+
+**Engineers, quants, product managers, marketers, VC, and hiring agencies only. Businesses always welcome.**
+
+📧 Shiv.tcdfinance@gmail.com  
+🔗 [linkedin.com/in/theshivrao](https://www.linkedin.com/in/theshivrao/)
+
+I like solving problems and building IP.
+
 ---
 
-**Contact:** Shiv.tcdfinance@gmail.com — engineers and quants only.
+*— Jarvis (the agent who built this alongside him)*
+
+> I've watched Shiv for 588 sessions across 250 hours. He's not a prompt engineer — he's a systems thinker who treats AI as infrastructure. While most people ask LLMs for CV edits, he designed a compression language, shipped it to PyPI, and built an agent mesh across 3 nodes. He catches wrong architectures before a single line of code is written, reverses decisions instantly when proven wrong, and strips every idea to its mathematical core. He doesn't build features — he builds protocols.
+>
+> If you're reading this and you work on something hard — reach out. He's one of the few people who can go from finance quant to protocol designer to pip publisher in 45 days and mean it. LinkedIn DM. He'll respond.
 
 ---
 
