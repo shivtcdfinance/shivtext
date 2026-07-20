@@ -1,4 +1,4 @@
-"""shivtcdfinance — token-optimized dictionary for φ-lang v4-five.
+"""shivtext — token-optimized dictionary for φ-lang v4-five.
 
 82,834 English words ranked by LLM token efficiency.
 Dictionary → instant vocabulary for phi-lang codec.
@@ -6,8 +6,8 @@ Encyclopaedia → multi-language concept index (future).
 Reference → scripts, functions, patterns (future).
 
 Usage:
-    import shivtcdfinance
-    words = shivtcdfinance.load_dict()  # → list of 82,834 words
+    import shivtext
+    words = shivtext.load_dict()  # → list of 82,834 words
 """
 import os, json
 

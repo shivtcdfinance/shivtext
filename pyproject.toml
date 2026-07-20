@@ -3,7 +3,7 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "shivtcdfinance"
+name = "shivtext"
 version = "0.1.0"
 description = "Token-optimized dictionary for φ-lang v4-five. Dictionary + Encyclopaedia + Reference."
 requires-python = ">=3.10"
@@ -15,4 +15,4 @@ requires-python = ">=3.10"
 where = ["src"]
 
 [tool.setuptools.package-data]
-shivtcdfinance = ["dict/*.txt", "dict/*.json", "encyclopaedia/*.json", "reference/*.json"]
+shivtext = ["dict/*.txt", "dict/*.json", "encyclopaedia/*.json", "reference/*.json"]
