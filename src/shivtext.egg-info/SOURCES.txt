@@ -1,6 +1,7 @@
 README.md
 pyproject.toml
 src/shivtext/__init__.py
+src/shivtext/auth.py
 src/shivtext/ϕdictionary.py
 src/shivtext/ϕencyclopedia.py
 src/shivtext/ϕphrase.py

@@ -5,15 +5,12 @@ Zero-ambiguity design:
   2-char token in 82K dict → English word. Not in dict → φ code.
   No ^ prefix needed. 1,527 safe single-token codes.
 """
-import tiktoken, json, os, string
+import json, os, string
 
 C62 = string.digits + string.ascii_lowercase + string.ascii_uppercase
-_ENC = tiktoken.get_encoding("cl100k_base")
 _CUR = os.path.dirname(os.path.abspath(__file__))
 
-# ── Code tables ──
-# Ordered: safe 1-token codes first, then 2-token (fallback)
-_ALL_2CHAR = [a+b for a in C62 for b in C62]
+# ── Code tables (pre-computed, shipped as JSON — no tiktoken dependency) ──
 _SAFE_1TOK = []
 _MULTI_TOK = []
 
@@ -21,22 +18,11 @@ def _init_code_tables():
     global _SAFE_1TOK, _MULTI_TOK
     if _SAFE_1TOK:
         return
-    # Filter: exclude codes that are also English words
-    try:
-        import shivtext
-        english = set(shivtext.load_dict())
-        english.update(["yo","ok","ha","ah","oh","er","um","eh","mm","sh","hm",
-                         "ow","aw","ew","ay","ya","ye","na","da","ta","ma","pa",
-                         "fa","lo","ho","ey","oy"])
-    except ImportError:
-        english = set()
-    for c in _ALL_2CHAR:
-        nt = len(_ENC.encode(c))
-        if nt == 1:
-            if c not in english:
-                _SAFE_1TOK.append(c)
-        else:
-            _MULTI_TOK.append(c)
+    codes_path = os.path.join(_CUR, "dict", "phrase_codes.json")
+    with open(codes_path) as f:
+        data = json.load(f)
+    _SAFE_1TOK[:] = data["safe_1tok"]
+    _MULTI_TOK[:] = data["multi_tok"]
 
 # ── Phrase dictionary ──
 PHRASES = {}

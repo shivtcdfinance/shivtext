@@ -1,23 +1,42 @@
-"""shivtext — token-optimized φ-lang toolkit.
+"""shivtext — phi-lang v5: phrase-level token compression for LLM agent communication.
 
 Modules:
-    ϕdictionary   — 82K words, 3,844 codes, composition learning
+    ϕphrase       — PRIMARY: phrase encoding, 50%+ token savings (use this)
+    ϕdictionary   — Legacy word-level codec (deprecated, NEGATIVE token savings)
     ϕencyclopedia — Multi-language concept index (future)
     ϕreferences   — Scripts, functions, patterns (future)
 
 Usage:
-    from shivtext import ϕdictionary
-    d = ϕdictionary.new()
-    d.encode("hello world")
+    from shivtext import ϕphrase
+    phi = ϕphrase.new()
+    phi.encode("authentication service is down")      # → "00" (4→1 token)
+    phi.decode("00")  # → "authentication service is down"
+
+DO NOT USE ϕdictionary — it encodes every word as codes, which costs MORE
+tokens than English. ϕphrase only encodes phrases and keeps words as-is.
 """
 import os, json, importlib
 
 _PKG = os.path.dirname(__file__)
 
 # Import ϕ modules dynamically (ϕ character in filenames)
-ϕdictionary = importlib.import_module('shivtext.ϕdictionary')
-ϕencyclopedia = importlib.import_module('shivtext.ϕencyclopedia')
-ϕreferences = importlib.import_module('shivtext.ϕreferences')
+try:
+    ϕdictionary = importlib.import_module('shivtext.ϕdictionary')
+except (ModuleNotFoundError, ImportError):
+    ϕdictionary = None
+
+try:
+    ϕencyclopedia = importlib.import_module('shivtext.ϕencyclopedia')
+except (ModuleNotFoundError, ImportError):
+    ϕencyclopedia = None
+
+try:
+    ϕreferences = importlib.import_module('shivtext.ϕreferences')
+except (ModuleNotFoundError, ImportError):
+    ϕreferences = None
+
+# ϕphrase is the primary interface — use this
+import importlib.util
 try:
     ϕphrase = importlib.import_module('shivtext.ϕphrase')
 except (ModuleNotFoundError, ImportError):
@@ -25,8 +44,10 @@ except (ModuleNotFoundError, ImportError):
     if spec and spec.loader:
         ϕphrase = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(ϕphrase)
+    else:
+        ϕphrase = None
 
-__version__ = "0.7.0"
+__version__ = "0.6.1"
 
 def load_dict(optimized=True):
     name = "frequency_dictionary_en_82_765_opt.txt" if optimized else "frequency_dictionary_en_82_765.txt"

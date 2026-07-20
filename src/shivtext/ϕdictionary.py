@@ -1,16 +1,12 @@
-"""ϕdictionary — Token-optimized compression dictionary for φ-lang v4-five.
+"""ϕdictionary — DEPRECATED. Use ϕphrase instead.
 
-Pre-loads 82,834 English words ranked by LLM token efficiency.
-3,844 token-safe 2-char codes. Zero delta for top 3,644 words.
-Composition learning for repeated phrases.
+WARNING: This encodes EVERY word as 2-char codes, costing MORE LLM tokens
+than English. Use ϕphrase for phrase-only encoding (50%+ savings).
 
 Usage:
-    from shivtext import ϕdictionary
-    d = ϕdictionary.new()
-    d.encode("hello world")
-    d.decode(d.encode("hello world"))
-
-pip install shivtext
+    from shivtext import ϕphrase
+    phi = ϕphrase.new()
+    phi.encode("hello world")
 """
 import os, json
 
@@ -81,7 +77,7 @@ def new(load_cache=False):
 
 
 class _Session:
-    """Internal session wrapper — use ϕdictionary.new(), not this directly."""
+    """Internal session wrapper - use φdictionary.new(), not this directly."""
 
     def __init__(self, s):
         self._s = s
