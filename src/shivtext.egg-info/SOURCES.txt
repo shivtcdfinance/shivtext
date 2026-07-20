@@ -1,3 +1,4 @@
+README.md
 pyproject.toml
 src/shivtext/__init__.py
 src/shivtext/ϕdictionary.py
@@ -10,6 +11,7 @@ src/shivtext.egg-info/dependency_links.txt
 src/shivtext.egg-info/top_level.txt
 src/shivtext/dict/frequency_dictionary_en_82_765_opt.txt
 src/shivtext/dict/phi4five_codes.json
+src/shivtext/dict/phrase_codes.json
 src/shivtext/dict/token_map.json
 src/shivtext/encyclopaedia/manifest.json
 src/shivtext/reference/manifest.json

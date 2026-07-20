@@ -26,7 +26,7 @@ except (ModuleNotFoundError, ImportError):
         ϕphrase = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(ϕphrase)
 
-__version__ = "0.2.0"
+__version__ = "0.7.0"
 
 def load_dict(optimized=True):
     name = "frequency_dictionary_en_82_765_opt.txt" if optimized else "frequency_dictionary_en_82_765.txt"
