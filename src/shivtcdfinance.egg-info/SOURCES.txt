@@ -1,0 +1,11 @@
+pyproject.toml
+src/shivtcdfinance/__init__.py
+src/shivtcdfinance.egg-info/PKG-INFO
+src/shivtcdfinance.egg-info/SOURCES.txt
+src/shivtcdfinance.egg-info/dependency_links.txt
+src/shivtcdfinance.egg-info/top_level.txt
+src/shivtcdfinance/dict/frequency_dictionary_en_82_765_opt.txt
+src/shivtcdfinance/dict/phi4five_codes.json
+src/shivtcdfinance/dict/token_map.json
+src/shivtcdfinance/encyclopaedia/manifest.json
+src/shivtcdfinance/reference/manifest.json
