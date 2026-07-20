@@ -51,7 +51,7 @@ PRELOAD_COUNT = min(len(_DICT_WORDS), CODE_COUNT - 200)  # reserve 200 for sessi
 SESSION_RESERVE = 200
 
 
-class Communicator:
+class philangdict:
     """
     Token-optimized dictionary codec.
 
