@@ -12,32 +12,28 @@ _ENC = tiktoken.get_encoding("cl100k_base")
 _CUR = os.path.dirname(os.path.abspath(__file__))
 
 # ── Code tables ──
-# Ordered: safe 1-token codes first, then unsafe 1-token, then 2-token (fallback)
+# Ordered: safe 1-token codes first, then 2-token (fallback)
 _ALL_2CHAR = [a+b for a in C62 for b in C62]
 _SAFE_1TOK = []
-_UNSAFE_1TOK = []
 _MULTI_TOK = []
-_ENGLISH_WORDS = None
 
 def _init_code_tables():
-    global _SAFE_1TOK, _UNSAFE_1TOK, _MULTI_TOK, _ENGLISH_WORDS
+    global _SAFE_1TOK, _MULTI_TOK
     if _SAFE_1TOK:
         return
+    # Filter: exclude codes that are also English words
     try:
         import shivtext
-        _ENGLISH_WORDS = set(shivtext.load_dict())
+        english = set(shivtext.load_dict())
+        english.update(["yo","ok","ha","ah","oh","er","um","eh","mm","sh","hm",
+                         "ow","aw","ew","ay","ya","ye","na","da","ta","ma","pa",
+                         "fa","lo","ho","ey","oy"])
     except ImportError:
-        _ENGLISH_WORDS = set()
-    # Add common 2-char English words not in frequency dict
-    _ENGLISH_WORDS.update(["yo","ok","ha","ah","oh","er","um","eh","mm","sh","hm",
-                            "ow","aw","ew","ay","ya","ye","na","da","ta","ma","pa",
-                            "fa","lo","ho","ey","oy"])
+        english = set()
     for c in _ALL_2CHAR:
         nt = len(_ENC.encode(c))
         if nt == 1:
-            if c in _ENGLISH_WORDS:
-                _UNSAFE_1TOK.append(c)
-            else:
+            if c not in english:
                 _SAFE_1TOK.append(c)
         else:
             _MULTI_TOK.append(c)
@@ -149,20 +145,15 @@ def _build_phrases():
 def _next_code(idx):
     if idx < len(_SAFE_1TOK):
         return _SAFE_1TOK[idx]
-    uidx = idx - len(_SAFE_1TOK)
-    if uidx < len(_UNSAFE_1TOK):
-        return _UNSAFE_1TOK[uidx]
-    midx = idx - len(_SAFE_1TOK) - len(_UNSAFE_1TOK)
+    # Skip unsafe codes — they collide with English words
+    midx = idx - len(_SAFE_1TOK)
     if midx < len(_MULTI_TOK):
         return _MULTI_TOK[midx]
     return None
 
 def _is_code(token):
-    """Token is a φ code if it's 2 chars and NOT in the English dictionary."""
-    _init_code_tables()
-    if len(token) != 2 or token[0] not in C62 or token[1] not in C62:
-        return False
-    return token not in _ENGLISH_WORDS
+    """Token is a φ code if it's 2 chars in C62. Check code table directly at decode."""
+    return len(token) == 2 and token[0] in C62 and token[1] in C62
 
 
 def new(load_cache=False):
@@ -273,7 +264,7 @@ class Session:
             pair = f"{code_tokens[i]} {code_tokens[i+1]}"
             s['compositions'][pair] = s['compositions'].get(pair, 0) + 1
             if s['compositions'][pair] >= s['threshold'] and pair not in s['comp_codes']:
-                for code in _SAFE_1TOK + _UNSAFE_1TOK:
+                for code in _SAFE_1TOK:
                     if code not in s['code_to_phrase'] and code not in s['rev_comp']:
                         s['comp_codes'][pair] = code
                         s['rev_comp'][code] = code_tokens[i:i+2]
