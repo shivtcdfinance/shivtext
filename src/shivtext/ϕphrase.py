@@ -5,7 +5,7 @@ Zero-ambiguity design:
   2-char token in 82K dict → English word. Not in dict → φ code.
   No ^ prefix needed. 1,527 safe single-token codes.
 """
-import json, os, string
+import json, os, re, string
 
 C62 = string.digits + string.ascii_lowercase + string.ascii_uppercase
 _CUR = os.path.dirname(os.path.abspath(__file__))
@@ -228,21 +228,24 @@ class Session:
         return '\n'.join(encoded_lines)
 
     def _encode_line(self, text):
-        """Encode a single line (no newlines inside)."""
+        """Encode a single line, preserving exact whitespace."""
         if not text or not text.strip():
-            return ''
+            return text
         s = self._s
-        tokens = text.strip().split()
+        # Split into alternating whitespace and non-whitespace chunks.
+        # Word j is at part index 2*j+1; whitespace before it at 2*j.
+        parts = re.split(r'(\S+)', text)
+        words = [p for p in parts if p.strip()]
         sorted_phrases = sorted(s['phrases'], key=len, reverse=True)
         encoded_positions = set()
         i = 0
 
-        while i < len(tokens):
+        while i < len(words):
             best_len = 0
             for phrase in sorted_phrases:
                 p_tokens = phrase.split()
                 plen = len(p_tokens)
-                if i + plen <= len(tokens) and tokens[i:i+plen] == p_tokens:
+                if i + plen <= len(words) and words[i:i+plen] == p_tokens:
                     if plen > best_len:
                         best_len = plen
             if best_len >= 2:
@@ -252,25 +255,38 @@ class Session:
             else:
                 i += 1
 
+        # Build replacement map: part_index → replacement ('' = skip)
+        replacements = {}
         result = []
         i = 0
-        while i < len(tokens):
+        while i < len(words):
             if i in encoded_positions:
                 for phrase in sorted_phrases:
                     p_tokens = phrase.split()
-                    if tokens[i:i+len(p_tokens)] == p_tokens and i + len(p_tokens) <= len(tokens):
-                        result.append(s['phrases'][phrase])
+                    if words[i:i+len(p_tokens)] == p_tokens and i + len(p_tokens) <= len(words):
+                        code = s['phrases'][phrase]
+                        result.append(code)
+                        # First word → code
+                        replacements[2*i + 1] = code
+                        # Subsequent words + their leading whitespace → empty
+                        for j in range(1, len(p_tokens)):
+                            replacements[2*(i+j)] = ''      # whitespace
+                            replacements[2*(i+j) + 1] = ''  # word
                         i += len(p_tokens)
                         break
                 else:
-                    result.append(tokens[i])
+                    result.append(words[i])
                     i += 1
             else:
-                result.append(tokens[i])
+                result.append(words[i])
                 i += 1
 
         self._learn_compositions(result)
-        return ' '.join(result)
+        # Reconstruct with replacements
+        out_parts = []
+        for pi, part in enumerate(parts):
+            out_parts.append(replacements.get(pi, part))
+        return ''.join(out_parts)
 
     def decode(self, text):
         """Decode text, preserving newline structure line-by-line."""
@@ -281,26 +297,25 @@ class Session:
         return '\n'.join(decoded_lines)
 
     def _decode_line(self, text):
-        """Decode a single line (no newlines inside)."""
+        """Decode a single line, preserving exact whitespace."""
         if not text:
             return ''
         s = self._s
-        tokens = text.strip().split()
-        out, i = [], 0
-
-        while i < len(tokens):
-            tok = tokens[i]
-            if _is_code(tok) and tok in s['code_to_phrase']:
-                out.append(s['code_to_phrase'][tok])
-            elif _is_code(tok) and tok in s['rev_comp']:
-                parts = []
-                for ct in s['rev_comp'][tok]:
-                    parts.append(s['code_to_phrase'].get(ct, ct))
-                out.append(' '.join(parts))
+        parts = re.split(r'(\S+)', text)
+        out_parts = []
+        for part in parts:
+            if part.strip() == '':
+                out_parts.append(part)
+            elif _is_code(part) and part in s['code_to_phrase']:
+                out_parts.append(s['code_to_phrase'][part])
+            elif _is_code(part) and part in s['rev_comp']:
+                sub = []
+                for ct in s['rev_comp'][part]:
+                    sub.append(s['code_to_phrase'].get(ct, ct))
+                out_parts.append(' '.join(sub))
             else:
-                out.append(tok)
-            i += 1
-        return ' '.join(out)
+                out_parts.append(part)
+        return ''.join(out_parts)
 
     def delta(self):
         d = self._s['delta'][:]
