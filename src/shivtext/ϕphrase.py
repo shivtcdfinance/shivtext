@@ -29,6 +29,7 @@ def _init_code_tables():
     _init_english_words()
     if _ENGLISH_WORDS:
         _SAFE_1TOK[:] = [c for c in _SAFE_1TOK if c.lower() not in _ENGLISH_WORDS]
+        _MULTI_TOK[:] = [c for c in _MULTI_TOK if c.lower() not in _ENGLISH_WORDS]
 
 def _init_english_words():
     """Load common English 2-letter words from the frequency dictionary
@@ -42,6 +43,21 @@ def _init_english_words():
         _ENGLISH_WORDS = {w for w in words if len(w) == 2}
     except ImportError:
         pass
+    # Supplement with interjections and rare 2-letter words not in the
+    # frequency dictionary but still valid English that could appear in text.
+    _EXTRAS = {'ah','oh','ha','ok','yo','lo','eh','um','er','uh','ow','sh','ay',
+               'aw','ew','mm','hm','eh','oi','oy','ya','ye','wo','po','oo','ar',
+               'ai','bo','da','fa','gi','ho','ja','ka','la','ma','na','op','pa',
+               'qi','ra','sa','ta','ur','ut','va','wa','xi','xu','ya','za','ze',
+               'zo','aa','ab','ad','ae','ag','al','ar','aw','ax','ba','bi','bo',
+               'ch','da','de','di','ed','ef','el','em','en','er','es','et','ex',
+               'fa','fe','gi','gu','ha','hi','hm','ho','id','if','in','io','is',
+               'it','jo','ka','ki','la','li','lo','ma','mi','mm','mo','mu','my',
+               'na','ne','no','nu','od','oe','of','oh','oi','om','on','oo','op',
+               'or','os','ou','ow','ox','oy','pa','pe','pi','qi','re','sh','si',
+               'so','ta','te','ti','to','uh','um','un','up','us','ut','we','wo',
+               'xi','xu','ya','ye','yo','za','ze','zo'}
+    _ENGLISH_WORDS.update(_EXTRAS)
 
 # ── Phrase dictionary ──
 PHRASES = {}
