@@ -1,29 +1,6 @@
 # shivtext
 
-> **`pip install shivtext`** — token-optimized dictionary for φ-lang.
-
----
-
-## Repository Structure
-
-```
-shivtext/
-├── v0.1.0/  ...  v0.8.2/     ← shivtext versions (archived forever, synced with PyPI)
-├── shivlite/                   ← lightweight chat compressor (pip install shivlite)
-├── pyproject.toml              ← shivtext 0.8.2 reference config
-└── README.md
-```
-
-Each `vX.Y.Z/` folder contains the exact source published to PyPI for that version. The development history is archived permanently.
-
----
-
-## Packages
-
-| Package | PyPI | Purpose |
-|---|---|---|
-| shivtext | `pip install shivtext` | Full φ-lang dictionary + phrase codec (archived) |
-| shivlite | `pip install shivlite` | Lightweight chat compressor — encode/decode only |
+> **`pip install shivtext`** — one command, the entire φ-lang runtime is yours.
 
 ---
 
@@ -49,9 +26,7 @@ I'm scaling by deploying tools for our own system, and as part of research I ope
 
 ---
 
-**Contact:** https://www.linkedin.com/in/theshivrao/ — product designers, engineers and quants only.
-Hearty Welcome for all businesses who wish to reduce their costing and create a higher leverage factor so you beat your industry.
-Looking to grow, looking to build!
+**Contact:** Shiv.tcdfinance@gmail.com — engineers and quants only.
 
 ---
 

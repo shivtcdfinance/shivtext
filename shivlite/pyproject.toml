@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shivlite"
+version = "0.1.0"
+description = "Lightweight chat compressor — encode/decode for LLM conversations. Zero deps, instant import."
+requires-python = ">=3.10"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+shivlite = ["dict/*"]
+
+[project.urls]
+Homepage = "https://github.com/shivtcdfinance/shivtext"
+Repository = "https://github.com/shivtcdfinance/shivtext"

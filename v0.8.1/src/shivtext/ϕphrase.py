@@ -1,0 +1,361 @@
+"""ϕphrase — Phrase-level compressor for φ-lang v5.
+
+Zero-ambiguity design:
+  Codes that collide with English words ("hi", "go", "be") are never assigned.
+  2-char token in 82K dict → English word. Not in dict → φ code.
+  No ^ prefix needed. 1,527 safe single-token codes.
+"""
+import json, os, re, string
+
+C62 = string.digits + string.ascii_lowercase + string.ascii_uppercase
+_CUR = os.path.dirname(os.path.abspath(__file__))
+
+# ── Code tables (pre-computed, shipped as JSON — no tiktoken dependency) ──
+_SAFE_1TOK = []
+_MULTI_TOK = []
+_ENGLISH_WORDS = set()
+
+def _init_code_tables():
+    global _SAFE_1TOK, _MULTI_TOK
+    if _SAFE_1TOK:
+        return
+    codes_path = os.path.join(_CUR, "dict", "phrase_codes.json")
+    with open(codes_path) as f:
+        data = json.load(f)
+    _SAFE_1TOK[:] = data["safe_1tok"]
+    _MULTI_TOK[:] = data["multi_tok"]
+    # Remove codes that are common English words — they corrupt decode
+    # by silently expanding "IS"/"IF"/"IN"/etc. into random phrases
+    _init_english_words()
+    if _ENGLISH_WORDS:
+        _SAFE_1TOK[:] = [c for c in _SAFE_1TOK if c.lower() not in _ENGLISH_WORDS]
+
+def _init_english_words():
+    """Load common English 2-letter words from the frequency dictionary
+    so they are never assigned as φ-codes (avoids decode collisions)."""
+    global _ENGLISH_WORDS
+    if _ENGLISH_WORDS:
+        return
+    try:
+        import shivtext
+        words = shivtext.load_dict()
+        _ENGLISH_WORDS = {w for w in words if len(w) == 2}
+    except ImportError:
+        pass
+
+# ── Phrase dictionary ──
+PHRASES = {}
+CODE_TO_PHRASE = {}
+_PHRASES_BUILT = False
+
+def _ensure_phrases():
+    global PHRASES, CODE_TO_PHRASE, _PHRASES_BUILT
+    if _PHRASES_BUILT:
+        return
+    _init_code_tables()
+    PHRASES = _build_phrases()
+    CODE_TO_PHRASE = {v: k for k, v in PHRASES.items()}
+    _PHRASES_BUILT = True
+
+def _build_phrases():
+    phrases = {}
+    idx = 0
+
+    agent_phrases = [
+        "authentication service is down", "database connection timeout",
+        "connection pool exhausted", "cache layer is operational",
+        "queue depth is normal", "queue depth is high",
+        "memory usage is critical", "memory usage is high",
+        "memory usage is normal", "rolling update in progress",
+        "rolling update complete", "deploy to production",
+        "deploy to staging", "backup completed successfully",
+        "backup has failed", "migration in progress",
+        "migration completed", "error rate is elevated",
+        "error rate is normal", "latency is increasing",
+        "latency is normal", "restart the service",
+        "restart the authentication service", "check the system health",
+        "check the database connection", "all services are running",
+        "all services are healthy", "system is fully operational",
+        "system is degraded", "system is down",
+        "need immediate attention", "no action required",
+        "investigating the issue", "resolution in progress",
+        "escalating to primary node", "primary node is unreachable",
+        "secondary node taking over", "failover complete",
+        "load balancer is misconfigured", "tls certificate expiring",
+        "disk space is low", "cpu usage is high",
+        "network partition detected", "replica lag is increasing",
+        "read replica is behind", "write throughput is degraded",
+        "circuit breaker is open", "circuit breaker reset",
+        "retry queue is building", "dead letter queue is growing",
+        "health check is failing", "health check passed",
+        "metrics dashboard updated", "logs rotated successfully",
+        "configuration reloaded", "secret rotation complete",
+        "audit log is full", "rate limiter engaged",
+        "throttling requests", "dependency service is slow",
+        "upstream timeout detected", "downstream service unavailable",
+        "api gateway is throttling", "websocket connection dropped",
+        "grpc channel is broken", "message broker is backlogged",
+        "event processor is lagging", "stream processor restarting",
+        "batch job completed", "batch job timed out",
+        "scheduled task failed", "cron job is stuck",
+        "data pipeline is stalled", "etl process completed",
+        "data inconsistency detected", "checksum mismatch",
+        "index rebuild in progress", "index rebuild complete",
+        "query performance degraded", "slow query detected",
+        "table lock detected", "vacuum complete",
+        "wal file growing", "replication slot is full",
+        "pgbouncer pool exhausted", "redis sentinel election",
+        "kafka consumer lag", "elasticsearch cluster yellow",
+        "elasticsearch cluster red", "elasticsearch cluster green",
+        "prometheus scraping timeout", "grafana alert triggered",
+        "pagerduty incident created", "on call rotation changed",
+        "deployment pipeline is blocked", "build is failing",
+        "test suite failed", "linting errors detected",
+        "security scan found vulnerabilities", "dependency update available",
+        "ssl certificate renewed", "dns propagation delay",
+        "cdn cache purged", "origin server is slow",
+        "edge function deployed", "serverless cold start detected",
+        "lambda timeout warning", "s3 bucket permission changed",
+        "iam policy updated", "vpc peering established",
+        "subnet is out of ips", "nat gateway throttling",
+    ]
+
+    for phrase in agent_phrases:
+        code = _next_code(idx)
+        if code and phrase not in phrases:
+            phrases[phrase] = code
+            idx += 1
+
+    try:
+        import shivtext
+        words = shivtext.load_dict()[:10000]
+        for i in range(len(words)-1):
+            bigram = f"{words[i]} {words[i+1]}"
+            if bigram not in phrases:
+                code = _next_code(idx)
+                if code:
+                    phrases[bigram] = code
+                    idx += 1
+        for i in range(len(words)-2):
+            trigram = f"{words[i]} {words[i+1]} {words[i+2]}"
+            if trigram not in phrases:
+                code = _next_code(idx)
+                if code:
+                    phrases[trigram] = code
+                    idx += 1
+    except ImportError:
+        pass
+    return phrases
+
+def _next_code(idx):
+    if idx < len(_SAFE_1TOK):
+        return _SAFE_1TOK[idx]
+    # Skip unsafe codes — they collide with English words
+    midx = idx - len(_SAFE_1TOK)
+    if midx < len(_MULTI_TOK):
+        return _MULTI_TOK[midx]
+    return None
+
+def _is_code(token):
+    """Token is a φ code — 2 chars (in C62) or 3 digits (overflow).
+    Never matches common English words (case-insensitive) — they always
+    pass through as plain text, never expand to phrase codes."""
+    if (len(token) == 2 and token[0] in C62 and token[1] in C62) or \
+       (len(token) == 3 and token.isdigit()):
+        # 2-char English words are NOT φ-codes — they pass through
+        _init_english_words()
+        if len(token) == 2 and token.lower() in _ENGLISH_WORDS:
+            return False
+        return True
+    return False
+
+
+def new(load_cache=False, fallback_paths=None):
+    """Create a new φphrase session.
+    
+    Args:
+        fallback_paths: Optional list of .dict file paths for extension phrases.
+        Format: code=phrase text per line. Extension codes never overwrite primary.
+    """
+    _ensure_phrases()
+    s = {
+        'phrases': dict(PHRASES),
+        'code_to_phrase': dict(CODE_TO_PHRASE),
+        'delta': [],
+        'compositions': {},
+        'comp_codes': {},
+        'rev_comp': {},
+        'threshold': 3,
+    }
+    
+    # Load fallback dictionaries (auto-assign codes, 3-char for overflow)
+    if fallback_paths:
+        overflow_idx = 0
+        for fp in fallback_paths:
+            if not os.path.exists(fp):
+                continue
+            with open(fp) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    phrase = line.split('=', 1)[0] if '=' in line else line
+                    phrase = phrase.strip()
+                    if phrase and phrase not in s['phrases']:
+                        # Try 2-char first, fall back to 3-char overflow
+                        code = _next_code(len(s['code_to_phrase']))
+                        if not code:
+                            # 3-char overflow: 000, 001, 002...
+                            code = f"{overflow_idx:03d}"
+                            overflow_idx += 1
+                        if code:
+                            s['code_to_phrase'][code] = phrase
+                            s['phrases'][phrase] = code
+    
+    return Session(s)
+
+
+class Session:
+    def __init__(self, s):
+        self._s = s
+
+    def encode(self, text):
+        """Encode text, preserving newline structure line-by-line."""
+        if not text:
+            return ''
+        lines = text.split('\n')
+        encoded_lines = [self._encode_line(line) for line in lines]
+        return '\n'.join(encoded_lines)
+
+    def _encode_line(self, text):
+        """Encode a single line, preserving exact whitespace."""
+        if not text or not text.strip():
+            return text
+        s = self._s
+        # Split into alternating whitespace and non-whitespace chunks.
+        # Word j is at part index 2*j+1; whitespace before it at 2*j.
+        parts = re.split(r'(\S+)', text)
+        words = [p for p in parts if p.strip()]
+        sorted_phrases = sorted(s['phrases'], key=len, reverse=True)
+        encoded_positions = set()
+        i = 0
+
+        while i < len(words):
+            best_len = 0
+            for phrase in sorted_phrases:
+                p_tokens = phrase.split()
+                plen = len(p_tokens)
+                if i + plen <= len(words) and words[i:i+plen] == p_tokens:
+                    if plen > best_len:
+                        best_len = plen
+            if best_len >= 2:
+                for j in range(best_len):
+                    encoded_positions.add(i + j)
+                i += best_len
+            else:
+                i += 1
+
+        # Build replacement map: part_index → replacement ('' = skip)
+        replacements = {}
+        result = []
+        i = 0
+        while i < len(words):
+            if i in encoded_positions:
+                for phrase in sorted_phrases:
+                    p_tokens = phrase.split()
+                    if words[i:i+len(p_tokens)] == p_tokens and i + len(p_tokens) <= len(words):
+                        code = s['phrases'][phrase]
+                        result.append(code)
+                        # First word → code
+                        replacements[2*i + 1] = code
+                        # Subsequent words + their leading whitespace → empty
+                        for j in range(1, len(p_tokens)):
+                            replacements[2*(i+j)] = ''      # whitespace
+                            replacements[2*(i+j) + 1] = ''  # word
+                        i += len(p_tokens)
+                        break
+                else:
+                    result.append(words[i])
+                    i += 1
+            else:
+                result.append(words[i])
+                i += 1
+
+        self._learn_compositions(result)
+        # Reconstruct with replacements
+        out_parts = []
+        for pi, part in enumerate(parts):
+            out_parts.append(replacements.get(pi, part))
+        return ''.join(out_parts)
+
+    def decode(self, text):
+        """Decode text, preserving newline structure line-by-line."""
+        if not text:
+            return ''
+        lines = text.split('\n')
+        decoded_lines = [self._decode_line(line) for line in lines]
+        return '\n'.join(decoded_lines)
+
+    def _decode_line(self, text):
+        """Decode a single line, preserving exact whitespace."""
+        if not text:
+            return ''
+        s = self._s
+        parts = re.split(r'(\S+)', text)
+        out_parts = []
+        for part in parts:
+            if part.strip() == '':
+                out_parts.append(part)
+            elif _is_code(part) and part in s['code_to_phrase']:
+                out_parts.append(s['code_to_phrase'][part])
+            elif _is_code(part) and part in s['rev_comp']:
+                sub = []
+                for ct in s['rev_comp'][part]:
+                    sub.append(s['code_to_phrase'].get(ct, ct))
+                out_parts.append(' '.join(sub))
+            else:
+                out_parts.append(part)
+        return ''.join(out_parts)
+
+    def delta(self):
+        d = self._s['delta'][:]
+        self._s['delta'] = []
+        return d
+
+    def apply(self, values):
+        for v in values:
+            self._assign(v)
+
+    def stats(self):
+        s = self._s
+        return {
+            'phrases': len(s['phrases']),
+            'compositions': len(s['comp_codes']),
+            'delta': len(s['delta']),
+        }
+
+    def _learn_compositions(self, tokens):
+        s = self._s
+        code_tokens = [t for t in tokens if _is_code(t) and t in s['code_to_phrase']]
+        for i in range(len(code_tokens) - 1):
+            pair = f"{code_tokens[i]} {code_tokens[i+1]}"
+            s['compositions'][pair] = s['compositions'].get(pair, 0) + 1
+            if s['compositions'][pair] >= s['threshold'] and pair not in s['comp_codes']:
+                for code in _SAFE_1TOK:
+                    if code not in s['code_to_phrase'] and code not in s['rev_comp']:
+                        s['comp_codes'][pair] = code
+                        s['rev_comp'][code] = code_tokens[i:i+2]
+                        s['delta'].append({'type': 'comp', 'pair': pair, 'code': code})
+                        break
+
+    def _assign(self, value):
+        s = self._s
+        if isinstance(value, dict) and value.get('type') == 'comp':
+            pair, code = value['pair'], value['code']
+            s['comp_codes'][pair] = code
+            s['rev_comp'][code] = pair.split()
+            parts = []
+            for p in pair.split():
+                if p in s['code_to_phrase']:
+                    parts.append(s['code_to_phrase'][p])
+            s['code_to_phrase'][code] = ' '.join(parts) if parts else pair
