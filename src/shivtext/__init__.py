@@ -39,7 +39,7 @@ try:
 except (ModuleNotFoundError, ImportError):
     ϕphrase = None
 
-__version__ = "0.7.4"
+__version__ = "0.8.1"
 
 def load_dict(optimized=True):
     name = "frequency_dictionary_en_82_765_opt.txt" if optimized else "frequency_dictionary_en_82_765.txt"

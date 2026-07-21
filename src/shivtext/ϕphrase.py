@@ -13,6 +13,7 @@ _CUR = os.path.dirname(os.path.abspath(__file__))
 # ── Code tables (pre-computed, shipped as JSON — no tiktoken dependency) ──
 _SAFE_1TOK = []
 _MULTI_TOK = []
+_ENGLISH_WORDS = set()
 
 def _init_code_tables():
     global _SAFE_1TOK, _MULTI_TOK
@@ -23,6 +24,24 @@ def _init_code_tables():
         data = json.load(f)
     _SAFE_1TOK[:] = data["safe_1tok"]
     _MULTI_TOK[:] = data["multi_tok"]
+    # Remove codes that are common English words — they corrupt decode
+    # by silently expanding "IS"/"IF"/"IN"/etc. into random phrases
+    _init_english_words()
+    if _ENGLISH_WORDS:
+        _SAFE_1TOK[:] = [c for c in _SAFE_1TOK if c.lower() not in _ENGLISH_WORDS]
+
+def _init_english_words():
+    """Load common English 2-letter words from the frequency dictionary
+    so they are never assigned as φ-codes (avoids decode collisions)."""
+    global _ENGLISH_WORDS
+    if _ENGLISH_WORDS:
+        return
+    try:
+        import shivtext
+        words = shivtext.load_dict()
+        _ENGLISH_WORDS = {w for w in words if len(w) == 2}
+    except ImportError:
+        pass
 
 # ── Phrase dictionary ──
 PHRASES = {}
@@ -138,9 +157,17 @@ def _next_code(idx):
     return None
 
 def _is_code(token):
-    """Token is a φ code — 2 chars (in C62) or 3 digits (overflow)."""
-    return (len(token) == 2 and token[0] in C62 and token[1] in C62) or \
-           (len(token) == 3 and token.isdigit())
+    """Token is a φ code — 2 chars (in C62) or 3 digits (overflow).
+    Never matches common English words (case-insensitive) — they always
+    pass through as plain text, never expand to phrase codes."""
+    if (len(token) == 2 and token[0] in C62 and token[1] in C62) or \
+       (len(token) == 3 and token.isdigit()):
+        # 2-char English words are NOT φ-codes — they pass through
+        _init_english_words()
+        if len(token) == 2 and token.lower() in _ENGLISH_WORDS:
+            return False
+        return True
+    return False
 
 
 def new(load_cache=False, fallback_paths=None):
