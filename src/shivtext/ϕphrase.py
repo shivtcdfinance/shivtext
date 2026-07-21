@@ -220,6 +220,15 @@ class Session:
         self._s = s
 
     def encode(self, text):
+        """Encode text, preserving newline structure line-by-line."""
+        if not text:
+            return ''
+        lines = text.split('\n')
+        encoded_lines = [self._encode_line(line) for line in lines]
+        return '\n'.join(encoded_lines)
+
+    def _encode_line(self, text):
+        """Encode a single line (no newlines inside)."""
         if not text or not text.strip():
             return ''
         s = self._s
@@ -260,11 +269,19 @@ class Session:
                 result.append(tokens[i])
                 i += 1
 
-        encoded = ' '.join(result)
         self._learn_compositions(result)
-        return encoded
+        return ' '.join(result)
 
     def decode(self, text):
+        """Decode text, preserving newline structure line-by-line."""
+        if not text:
+            return ''
+        lines = text.split('\n')
+        decoded_lines = [self._decode_line(line) for line in lines]
+        return '\n'.join(decoded_lines)
+
+    def _decode_line(self, text):
+        """Decode a single line (no newlines inside)."""
         if not text:
             return ''
         s = self._s
